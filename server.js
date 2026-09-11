@@ -8,6 +8,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+const path = require('path');
+
+// Serve index.html explicitly for the root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Health Check Route
 app.get('/api/health', (req, res) => {
   res.json({ status: "OK", service: "FleetRelief Dispatcher" });
@@ -41,3 +48,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`FleetRelief Agent Server running on http://localhost:${PORT}`);
 });
+
+module.exports = app;
