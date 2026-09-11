@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2310b981%22/><text y=%2268%22 x=%2250%22 font-size=%2255%22 text-anchor=%22middle%22>🚌</text></svg>">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FleetRelief AI - Incident Dispatcher</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 font-sans">
+    <div class="max-w-3xl mx-auto space-y-6">
+
+        <!-- Header with Integrated Logo -->
+        <header class="border-b border-slate-700 pb-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl shadow-inner">
+                    🚌
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-emerald-400 leading-tight">FleetRelief AI</h1>
+                    <p class="text-xs text-slate-400">Autonomous Transit Incident Triage & Dispatch (Amazon Bedrock
+                        Nova)</p>
+                </div>
+            </div>
+            <span
+                class="px-3 py-1 bg-emerald-950 text-emerald-300 text-xs font-semibold rounded-full border border-emerald-700 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                System Online
+            </span>
+        </header>
+
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg space-y-4">
+            <h2 class="text-lg font-semibold">Report Fleet Incident</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Route Name</label>
+                    <input id="routeName" type="text" value="Howrah - Salt Lake"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Passenger Notice Language Output</label>
+                    <select id="targetLang"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm">
+                        <option value="BILINGUAL_DIALECT">Colloquial Code-Mixed (Banglish / Hinglish)</option>
+                        <option value="MATCH_INPUT">Exact Driver Script (e.g. Pure Bengali / Hindi)</option>
+                        <option value="ENGLISH">Standard English</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">Driver Incident Description (Any Language /
+                    Script)</label>
+                <textarea id="driverReport" rows="3"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+                    placeholder="e.g. Shyam bazar er kache tyre puncture..."></textarea>
+            </div>
+
+            <button id="dispatchBtn" onclick="sendIncident()"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 font-medium py-2.5 rounded-lg transition duration-150">
+                Trigger Autonomous Bedrock Dispatch
+            </button>
+        </div>
+
+        <!-- Live Output -->
+        <div id="dispatchOutput" class="hidden bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold">Autonomous Triage Ticket</h2>
+                <div class="flex items-center gap-2">
+                    <span id="detectedLangBadge" class="text-xs text-slate-400"></span>
+                    <span id="badgeSeverity" class="px-3 py-1 rounded text-xs font-bold uppercase"></span>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div>
+                    <span class="text-xs text-slate-400 uppercase font-semibold">Incident Assessment:</span>
+                    <p id="summaryText" class="mt-0.5 text-slate-200"></p>
+                </div>
+                <div class="p-3 bg-slate-900/80 rounded-lg border border-slate-700">
+                    <span class="text-xs text-emerald-400 uppercase font-semibold">Immediate Fleet Action:</span>
+                    <p id="actionText" class="mt-0.5 text-slate-300"></p>
+                </div>
+                <div class="p-3 bg-amber-950/40 rounded-lg border border-amber-800/60">
+                    <span class="text-xs text-amber-300 uppercase font-semibold">Selected Language Passenger
+                        Notice:</span>
+                    <p id="noticeText" class="mt-0.5 text-amber-200 font-medium"></p>
+                </div>
+                <div class="p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                    <span class="text-xs text-slate-400 uppercase font-semibold">English Standard Reference:</span>
+                    <p id="noticeEnText" class="mt-0.5 text-slate-300 italic"></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function sendIncident() {
+            const btn = document.getElementById('dispatchBtn');
+            const driverReport = document.getElementById('driverReport').value;
+            const routeName = document.getElementById('routeName').value;
+            const targetLang = document.getElementById('targetLang').value;
+            const outputCard = document.getElementById('dispatchOutput');
+
+            if (!driverReport.trim()) return alert("Please enter an incident report.");
+
+            btn.disabled = true;
+            btn.innerText = "Bedrock Agent Reasoning...";
+
+            try {
+                const response = await fetch('/api/agent/incident', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ driverReport, routeName, targetLang })
+                });
+
+                const data = await response.json();
+                const dispatch = data.agentDispatch;
+
+                document.getElementById('summaryText').innerText = dispatch.summary;
+                document.getElementById('actionText').innerText = dispatch.immediateAction;
+                document.getElementById('noticeText').innerText = dispatch.passengerNotice;
+                document.getElementById('noticeEnText').innerText = dispatch.passengerNoticeEnglish;
+                document.getElementById('detectedLangBadge').innerText = `Detected: ${dispatch.detectedLanguage}`;
+
+                const badge = document.getElementById('badgeSeverity');
+                badge.innerText = dispatch.severity;
+                if (dispatch.severity === 'HIGH') {
+                    badge.className = "px-3 py-1 rounded text-xs font-bold bg-rose-950 text-rose-300 border border-rose-700";
+                } else if (dispatch.severity === 'MEDIUM') {
+                    badge.className = "px-3 py-1 rounded text-xs font-bold bg-amber-950 text-amber-300 border border-amber-700";
+                } else {
+                    badge.className = "px-3 py-1 rounded text-xs font-bold bg-blue-950 text-blue-300 border border-blue-700";
+                }
+
+                outputCard.classList.remove('hidden');
+            } catch (err) {
+                alert("Failed to reach agent server.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Trigger Autonomous Bedrock Dispatch";
+            }
+        }
+    </script>
+</body>
+
+</html>
