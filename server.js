@@ -1,18 +1,18 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 const { analyzeTransitIncident } = require('./bedrock');
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(process.cwd(), 'public')));
 
-const path = require('path');
-
-// Serve index.html explicitly for the root route
+// Root route to serve the dashboard
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
 // Health Check Route
@@ -29,8 +29,12 @@ app.post('/api/agent/incident', async (req, res) => {
       return res.status(400).json({ error: "driverReport is required" });
     }
 
-    console.log(`[INCIDENT RECEIVED]: "${driverReport}" on ${routeName} (Mode:${targetLang || 'MATCH_INPUT'})`);
-    const triageResultString = await analyzeTransitIncident(driverReport, routeName || "General Corridor", targetLang || "MATCH_INPUT");
+    console.log(`[INCIDENT RECEIVED]: "${driverReport}" on ${routeName} (Mode: ${targetLang || 'MATCH_INPUT'})`);
+    const triageResultString = await analyzeTransitIncident(
+      driverReport, 
+      routeName || "General Corridor", 
+      targetLang || "MATCH_INPUT"
+    );
     
     const parsedData = JSON.parse(triageResultString);
 
@@ -45,8 +49,11 @@ app.post('/api/agent/incident', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`FleetRelief Agent Server running on http://localhost:${PORT}`);
-});
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`FleetRelief Agent Server running on http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;
