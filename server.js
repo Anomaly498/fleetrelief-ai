@@ -20,8 +20,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: "OK", service: "FleetRelief Dispatcher" });
 });
 
-// Incident Dispatch Endpoint
-app.post('/api/agent/incident', async (req, res) => {
+// Incident Dispatch Endpoint (Accepts both path formats)
+app.post(['/api/agent/incident', '/agent/incident'], async (req, res) => {
   try {
     const { driverReport, routeName, targetLang } = req.body;
 
